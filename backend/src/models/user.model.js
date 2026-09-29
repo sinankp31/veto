@@ -1,4 +1,4 @@
-import mongoose from 'mongoosee';
+import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -18,6 +18,9 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['user', 'seller'],
         default: 'user'
+    },
+    refreshToken: {
+        type: String
     }
 })
 
