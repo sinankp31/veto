@@ -20,3 +20,13 @@ export const createRefreshToken = async ({userId, role})=>{
 
     return refreshToken
 }
+
+export const verifyRefreshToken = async (refreshToken)=>{
+
+    return await jwt.verify(refreshToken,config.REFRESH_TOKEN_SECRET)
+}
+
+export const verifyAccessToken = async (accessToken)=>{
+
+    return await jwt.verify(accessToken,config.ACCESS_TOKEN_SECRET)
+}

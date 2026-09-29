@@ -1,6 +1,6 @@
 import userModel from '../models/user.model.js'
 import bcrypt from 'bcryptjs'
-import {createAccessToken, createRefreshToken} from '../utils/auth.util.js'
+import {createAccessToken, createRefreshToken, verifyRefreshToken} from '../utils/auth.util.js'
 
 /**
  * @description Create a user by saving the data from req.body into database
@@ -129,4 +129,109 @@ export const login = async (req,res) =>{
         }
     })
 
+}
+
+/**
+ * @description Refresh the current refresh token and access token into a new set of refresh token and access token
+ */
+export const refresh = async (req, res) =>{
+
+    const refreshToken = req.cookies.refreshToken
+
+    if(!refreshToken){
+        return res.status(401).json({
+            success:false,
+            message:"Refresh token required"
+        })
+    }
+
+    try{
+
+        const decoded = await verifyRefreshToken(refreshToken)
+
+        const {userId, role} = decoded
+
+        const user = await userModel.findById(userId)
+
+        if(refreshToken != user.refreshToken){
+
+            await userModel.findByIdandUpdate(user._id,{
+                refreshToken: null
+            })
+
+            return res.status(401).json({
+                success: false,
+                message: "Refresh token mismatch"
+            })
+        }
+
+        const accessToken = await createAccessToken({
+            userId,
+            role
+        })
+
+        const newRefreshToken = await createRefreshToken({
+            userId,
+            role
+        })
+
+        res.cookie("refreshToken",newRefreshToken,{
+            httpOnly: true
+        })
+
+        await userModel.findByIdAndUpdate(user._id,{
+            refreshToken: newRefreshToken
+        })
+
+        res.status(200).json({
+            success: true,
+            message: "Tokens refreshed succefully",
+            data: {
+                user: {
+                    name: user.name,
+                    email: user.email,
+                    userId: user._id
+                },accessToken
+            }
+        })
+
+
+    }catch(err){
+
+        return res.status(401).json({
+            success:false,
+            message:"Invalid refresh token:",
+            error:err
+        })
+    }
+}
+
+/**
+ * @description Get the details of user who requested
+ */
+export const getMe = async (req,res) =>{
+
+    const {userId, role } = req.user
+
+    const user = await userModel.findById(userId)
+
+    if(!user){
+
+        return res.status(400).json({
+            success:false,
+            message:"User not exists"
+        })
+    }
+
+    return res.status(200).json({
+        success:true,
+        message:"User data fetched succesfully",
+        data: {
+            user: {
+                name: user.name,
+                email: user.email,
+                id: user._id
+            }
+        }
+    })
 }
