@@ -68,3 +68,65 @@ export const register = async (req,res) =>{
     })
 }
 
+/**
+ * @description Login a user by authentication and update the access token and refresh token
+ * @param req Express.Request
+ * @param req.body Object
+ * @param req.body.email String
+ * @param req.body.password String
+ */
+export const login = async (req,res) =>{
+
+    const {email, password} = req.body;
+
+    const user = await userModel.findOne({
+        email
+    })
+
+    if(!user){
+        return res.status(400).json({
+            success:false,
+            message:"Invalid email or password"
+        })
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
+
+    if(!isPasswordValid){
+        return res.status(400).json({
+            success:false,
+            message:"Invalid email or password"
+        })
+    }
+
+    const accessToken = await createAccessToken({
+        userId: user._id,
+        role: user.role
+    })
+
+    const refreshToken = await createRefreshToken({
+        userId: user._id,
+        role: user.role
+    })
+
+    res.cookie("refreshToken",refreshToken,{
+        httpOnly: true
+    })
+
+    await userModel.findByIdAndUpdate(user._id,{
+        refreshToken
+    })
+
+    res.status(201).json({
+        success: true,
+        message: "User logged in succesfully",
+        data: {
+            user: {
+                name: user.name,
+                email: user.email,
+                userId: user._id
+            },accessToken
+        }
+    })
+
+}
