@@ -26,4 +26,18 @@ export const authenticate = async(req, res, next) =>{
             error:err
         })
     }
-} 
+}
+
+export const authorizeSeller = () =>{
+    
+     return (req, res, next) =>{
+
+            if(req.user.role !== "seller"){
+                return res.status(403).json({
+                    success:false,
+                    message:"You are not authorized to access this resource"
+                })
+            }
+            next()
+        }
+}
