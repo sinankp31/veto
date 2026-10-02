@@ -34,7 +34,7 @@ export const createProduct = async (req, res) => {
 
 export const listAllProducts = async (req, res) => {
 
-    const products = await productModel.find()
+    const products = await productModel.find({published: true})
 
     return res.status(200).json({
         success: true,
@@ -45,7 +45,7 @@ export const listAllProducts = async (req, res) => {
 }
 
 export const listAllProductsToSeller = async (req, res) => {
-    const products = await productModel.find({})
+    const products = await productModel.find({seller: req.user.userId})
 
     return res.status(200).json({
         success: true,
@@ -58,7 +58,10 @@ export const unlistProduct = async (req, res) => {
 
     const {id} = req.params;
 
-    const product = await productModel.findById(id);
+    const product = await productModel.findOneAndUpdate(
+        {_id: id, seller: req.user.userId},
+        {$set: {published: false}}
+    );
 
     if(!product){
         return res.status(404).json({
@@ -66,12 +69,6 @@ export const unlistProduct = async (req, res) => {
             message: "Product not found"
         })
     }
-
-    await productModel.findByIdAndUpdate(id, 
-        {
-            published: false
-        }
-    );
 
     return res.status(200).json({
         success: true,
@@ -83,7 +80,10 @@ export const listProduct = async (req, res) => {
 
     const {id} = req.params;
 
-    const product = await productModel.findById(id);
+    const product = await productModel.findOneAndUpdate(
+        {_id: id, seller: req.user.userId},
+        {$set: {published: true}}
+    );
 
     if(!product){
         return res.status(404).json({
@@ -91,12 +91,6 @@ export const listProduct = async (req, res) => {
             message: "Product not found"
         })
     }
-
-    await productModel.findByIdAndUpdate(id,
-        {
-            published: true
-        }
-    );  
 
     return res.status(200).json({
         success: true,

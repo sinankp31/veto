@@ -13,7 +13,6 @@ export const registerValidator = [
     body('password')
         .notEmpty().withMessage("Password is required").bail()
         .isString().withMessage("Password must be a string").bail()
-        .trim()
         .isLength({min: 6}).withMessage("Password must be at least 6 characters long"),
     (req, res, next) =>{
 
@@ -39,7 +38,6 @@ export const loginValidator = [
     body('password')
         .notEmpty().withMessage("Password is required").bail()
         .isString().withMessage("Password must be a string").bail()
-        .trim()
         .isLength({min: 6}).withMessage("Password must be at least 6 characters long"),
     (req, res, next) =>{
 

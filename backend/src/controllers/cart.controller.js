@@ -4,11 +4,19 @@ import productModel from "../models/product.model.js";
 export const addToCart = async (req, res) =>{
 
     const {productId, quantity, size} = req.body
+    const requestedQuantity = Number(quantity)
 
     const product = await productModel.findById(productId)
 
     if (!product) {
         return res.status(404).json({ 
+            success: false,
+            message: "Product not found"
+        });
+    }
+
+    if (!product.published) {
+        return res.status(404).json({
             success: false,
             message: "Product not found"
         });
@@ -39,11 +47,13 @@ export const addToCart = async (req, res) =>{
         })
     }
 
-    const existingProduct = await cart.products.find((p => p.product.toString() === productId) && (p.size === size));
+    const existingProduct = cart.products.find(item =>
+        item.product.toString() === productId && item.size === size
+    );
 
     if(existingProduct){
 
-        if((existingProduct.quantity+quantity) > selectedSize.stock){
+        if((existingProduct.quantity + requestedQuantity) > selectedSize.stock){
                 return res.status(400).json({ 
                     success: false,
                     message: "Adding this quantity exceeds available stock for the selected size"
@@ -53,12 +63,16 @@ export const addToCart = async (req, res) =>{
         await cartModel.updateOne(
             {
                 user: req.user.userId,
-                "products.product": productId,
-                "products.size": size
+                products: {
+                    $elemMatch: {
+                        product: productId,
+                        size
+                    }
+                }
             },
             {
                 $inc: {
-                    "products.$.quantity": quantity
+                    "products.$.quantity": requestedQuantity
                 }
             }
         )
@@ -77,7 +91,7 @@ export const addToCart = async (req, res) =>{
             $push: {
                 products: {
                     product: productId,
-                    quantity: quantity,
+                    quantity: requestedQuantity,
                     size: size
                 }
             }

@@ -1,6 +1,14 @@
 import userModel from '../models/user.model.js'
 import bcrypt from 'bcryptjs'
+import config from '../configs/env.config.js'
 import {createAccessToken, createRefreshToken, verifyRefreshToken} from '../utils/auth.util.js'
+
+const refreshCookieOptions = {
+    httpOnly: true,
+    secure: config.NODE_ENV === 'production',
+    sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/api/auth'
+}
 
 /**
  * @description Create a user by saving the data from req.body into database
@@ -47,9 +55,7 @@ export const register = async (req,res) =>{
         role: user.role
     })
 
-    res.cookie("refreshToken",refreshToken,{
-        httpOnly: true
-    })
+    res.cookie("refreshToken",refreshToken,refreshCookieOptions)
 
     await userModel.findByIdAndUpdate(user._id,{
         refreshToken
@@ -90,7 +96,11 @@ export const login = async (req,res) =>{
         })
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
+    let isPasswordValid = await bcrypt.compare(password, user.passwordHash)
+
+    if (!isPasswordValid && password !== password.trim()) {
+        isPasswordValid = await bcrypt.compare(password.trim(), user.passwordHash)
+    }
 
     if(!isPasswordValid){
         return res.status(400).json({
@@ -109,9 +119,7 @@ export const login = async (req,res) =>{
         role: user.role
     })
 
-    res.cookie("refreshToken",refreshToken,{
-        httpOnly: true
-    })
+    res.cookie("refreshToken",refreshToken,refreshCookieOptions)
 
     await userModel.findByIdAndUpdate(user._id,{
         refreshToken
@@ -136,7 +144,7 @@ export const login = async (req,res) =>{
  */
 export const refresh = async (req, res) =>{
 
-    const refreshToken = req.cookies.refreshToken
+    const refreshToken = req.cookies?.refreshToken
 
     if(!refreshToken){
         return res.status(401).json({
@@ -145,65 +153,60 @@ export const refresh = async (req, res) =>{
         })
     }
 
-    try{
-
-        const decoded = await verifyRefreshToken(refreshToken)
-
-        const {userId, role} = decoded
-
-        const user = await userModel.findById(userId)
-
-        if(refreshToken != user.refreshToken){
-
-            await userModel.findByIdandUpdate(user._id,{
-                refreshToken: null
-            })
-
-            return res.status(401).json({
-                success: false,
-                message: "Refresh token mismatch"
-            })
-        }
-
-        const accessToken = await createAccessToken({
-            userId,
-            role
-        })
-
-        const newRefreshToken = await createRefreshToken({
-            userId,
-            role
-        })
-
-        res.cookie("refreshToken",newRefreshToken,{
-            httpOnly: true
-        })
-
-        await userModel.findByIdAndUpdate(user._id,{
-            refreshToken: newRefreshToken
-        })
-
-        res.status(200).json({
-            success: true,
-            message: "Tokens refreshed succefully",
-            data: {
-                user: {
-                    name: user.name,
-                    email: user.email,
-                    userId: user._id
-                },accessToken
-            }
-        })
-
-
-    }catch(err){
-
+    let decoded
+    try {
+        decoded = await verifyRefreshToken(refreshToken)
+    } catch {
         return res.status(401).json({
             success:false,
-            message:"Invalid refresh token:",
-            error:err
+            message:"Invalid refresh token"
         })
     }
+
+    const user = await userModel.findById(decoded.userId)
+
+    if (!user) {
+        return res.status(401).json({
+            success: false,
+            message: "Invalid refresh token"
+        })
+    }
+
+    if (refreshToken !== user.refreshToken) {
+        await userModel.findByIdAndUpdate(user._id, {refreshToken: null})
+        return res.status(401).json({
+            success: false,
+            message: "Refresh token mismatch"
+        })
+    }
+
+    const accessToken = await createAccessToken({
+        userId: user._id,
+        role: user.role
+    })
+
+    const newRefreshToken = await createRefreshToken({
+        userId: user._id,
+        role: user.role
+    })
+
+    await userModel.findByIdAndUpdate(user._id, {
+        refreshToken: newRefreshToken
+    })
+    res.cookie("refreshToken", newRefreshToken, refreshCookieOptions)
+
+    return res.status(200).json({
+        success: true,
+        message: "Tokens refreshed successfully",
+        data: {
+            user: {
+                name: user.name,
+                email: user.email,
+                userId: user._id
+            },
+            accessToken
+        }
+    })
 }
 
 /**

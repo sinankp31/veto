@@ -22,7 +22,7 @@ router.post('/', authenticate, authorizeSeller(), upload.array("images"),parsePr
  * @description Get all the published products from the database
  * @access public
  */
-router.get('/', authenticate, listAllProducts)
+router.get('/', listAllProducts)
 
 /**
  * @method GET

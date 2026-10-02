@@ -1,9 +1,10 @@
 import ImageKit, {toFile} from "@imagekit/nodejs";
+import config from "../configs/env.config.js";
 
 const imagekit = new ImageKit({
-    publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
-    privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
-    urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT,
+    publicKey: config.IMAGEKIT_PUBLIC_KEY,
+    privateKey: config.IMAGEKIT_PRIVATE_KEY,
+    urlEndpoint: config.IMAGEKIT_URL_ENDPOINT,
 });
 
 /**

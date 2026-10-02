@@ -5,8 +5,7 @@ export const createProductValidator = [
         .notEmpty().withMessage("Title is required").bail()
         .isString().withMessage("Title must be a string").bail()
         .trim()
-        .isLength({min: 2, max: 50}).withMessage("Title must be between 2 and 50 characters long").bail()
-        .isAlpha("en-US", {ignore: " -"}).withMessage("Title must contaian only alphabets and spaces"),
+        .isLength({min: 2, max: 50}).withMessage("Title must be between 2 and 50 characters long"),
     body("description")
         .notEmpty().withMessage("Description is rquired").bail()
         .isString().withMessage("Desription must be a string").bail()
