@@ -31,3 +31,15 @@ export const createProduct = async (req, res) => {
     })
 
 }
+
+export const listAllProducts = async (req, res) => {
+
+    const products = await productModel.find()
+
+    return res.status(200).json({
+        success: true,
+        message: "Products fetched successfully",
+        data: products
+    })
+
+}
